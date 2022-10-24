@@ -141,13 +141,17 @@ export class Point {
     const selection = this._selection;
     const oldKey = this.key;
     this.key = key;
-    this.offset = offset;
+    this.offset = type === 'element' ? 1 : offset;
     this.type = type;
     if (!isCurrentlyReadOnlyMode()) {
+      console.log(key);
+      console.log(this.offset);
       if ($getCompositionKey() === oldKey) {
+        console.log('running');
         $setCompositionKey(key);
       }
       if (selection !== null) {
+        console.log('running');
         selection._cachedNodes = null;
         selection.dirty = true;
       }
@@ -187,7 +191,38 @@ function selectPointOnNode(point: PointType, node: LexicalNode): void {
       }
     }
   }
+  console.log(parseInt(key) + ' ' + offset + ' ' + type);
+
   point.set(key, offset, type);
+  console.log(point);
+}
+function selectPointOnNodeElement(point: PointType, node: LexicalNode): void {
+  let key = node.__key;
+  let offset = point.offset;
+  let type: 'element' | 'text' = 'element';
+  if ($isTextNode(node)) {
+    type = 'element';
+    const textContentLength = node.getTextContentSize();
+    if (offset > textContentLength) {
+      offset = textContentLength;
+    }
+  } else if (!$isElementNode(node)) {
+    const nextSibling = node.getNextSibling();
+    if ($isTextNode(nextSibling)) {
+      key = nextSibling.__key;
+      offset = 0;
+    } else {
+      const parentNode = node.getParent();
+      if (parentNode) {
+        key = parentNode.__key;
+        offset = node.getIndexWithinParent() + 1;
+      }
+    }
+  }
+  console.log(parseInt(key) + ' ' + offset + ' ' + type);
+
+  point.set(key, offset, type);
+  console.log(point);
 }
 
 export function $moveSelectionPointToEnd(
@@ -196,13 +231,35 @@ export function $moveSelectionPointToEnd(
 ): void {
   if ($isElementNode(node)) {
     const lastNode = node.getLastDescendant();
+    console.log(lastNode);
     if ($isElementNode(lastNode) || $isTextNode(lastNode)) {
       selectPointOnNode(point, lastNode);
     } else {
       selectPointOnNode(point, node);
     }
   } else {
+    console.log(point);
+    console.log(node);
     selectPointOnNode(point, node);
+  }
+}
+
+export function $moveSelectionPointToEndElement(
+  point: PointType,
+  node: LexicalNode,
+): void {
+  if ($isElementNode(node)) {
+    const lastNode = node.getLastDescendant();
+    console.log(lastNode);
+    if ($isElementNode(lastNode) || $isTextNode(lastNode)) {
+      selectPointOnNodeElement(point, lastNode);
+    } else {
+      selectPointOnNodeElement(point, node);
+    }
+  } else {
+    console.log(point);
+    console.log(node);
+    selectPointOnNodeElement(point, node);
   }
 }
 
